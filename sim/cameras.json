@@ -1,0 +1,19 @@
+{
+  "_note": "Wide-angle fixed cameras on the perimeter walls, 5-6 m mount height. FOV is a generic wide-angle value, not a specific vendor model. Set B moves one camera to look along the barrier gates.",
+  "hfov_deg": 90.0,
+  "aspect": 1.7777778,
+  "sets": {
+    "A": [
+      {"id": "C1", "pos": [1.0,  1.0, 5.0], "look_at": [30.0, 20.0, 1.0]},
+      {"id": "C2", "pos": [59.0, 1.0, 5.0], "look_at": [30.0, 20.0, 1.0]},
+      {"id": "C3", "pos": [1.0, 39.0, 5.0], "look_at": [30.0, 20.0, 1.0]},
+      {"id": "C4", "pos": [59.0, 39.0, 5.0], "look_at": [30.0, 20.0, 1.0]}
+    ],
+    "B": [
+      {"id": "C1", "pos": [1.0,  1.0, 5.0], "look_at": [30.0, 20.0, 1.0]},
+      {"id": "C2", "pos": [59.0, 1.0, 5.0], "look_at": [30.0, 20.0, 1.0]},
+      {"id": "C3", "pos": [30.0, 39.0, 6.0], "look_at": [30.0, 18.0, 1.0]},
+      {"id": "C4", "pos": [59.0, 39.0, 5.0], "look_at": [30.0, 20.0, 1.0]}
+    ]
+  }
+}
