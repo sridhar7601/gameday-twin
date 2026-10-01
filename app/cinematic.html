@@ -79,8 +79,8 @@
   <!-- S6 -->
   <div class="t eyebrow" id="s6e">Fix &middot; prove</div>
   <div class="t h1" id="s6h">Move one camera.</div>
-  <div class="t sub" id="s6s">Camera C3 &nbsp;<b style="color:var(--blind)">5.5%</b> &nbsp;&rarr;&nbsp; <b style="color:var(--cov3)">46.8%</b> of the floor &middot; same building, same lens</div>
-  <div class="stat red" id="s6st"><div class="k">No camera sees</div><div class="v"><span id="s6n">850</span></div><div class="u">square metres</div></div>
+  <div class="t sub" id="s6s">Camera C3 &nbsp;<b style="color:var(--blind)">8%</b> &nbsp;&rarr;&nbsp; <b style="color:var(--cov3)">68%</b> of the concourse &middot; same building, same lens</div>
+  <div class="stat red" id="s6st"><div class="k">No camera sees</div><div class="v"><span id="s6n">226</span></div><div class="u">square metres</div></div>
   <div class="t foot" id="s6f">Unwatched person&#8209;seconds &nbsp;<b id="s6u">&mdash;</b></div>
   <!-- S7 -->
   <div class="t h1 center" id="s7w"><div class="wordmark">GameDay<span>Twin</span></div></div>
@@ -366,6 +366,8 @@ document.addEventListener('keydown', e => {
 function fit() { const s = Math.min(innerWidth / 1920, innerHeight / 1080); $('stage').style.transform = `translate(-50%,-50%) scale(${s})`; }
 addEventListener('resize', fit); fit();
 render(0); requestAnimationFrame(loop);
+/* deep link to a moment: cinematic.html#t=44 shows that frame paused (used for stills) */
+{ const m = location.hash.match(/t=([\d.]+)/); if (m) { $('hint').style.display = 'none'; seek(parseFloat(m[1])); } }
 </script>
 </body>
 </html>

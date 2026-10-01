@@ -365,7 +365,9 @@ function drawOverlay(t) {
   ctx.fillStyle = C.muted; ctx.font = '600 14px system-ui'; ctx.textAlign = 'center';
   ctx.fillText('TEMPORARY STAND', CXo - 300, CYo + 10); ctx.fillText('TEMPORARY STAND', CXo + 300, CYo + 10); ctx.fillText('COURT', CXo, CYo + 5);
   ctx.globalAlpha = eo(seg(t, 4.4, 5.6));
-  ctx.fillStyle = C.amber; ctx.font = '800 20px system-ui'; ctx.fillText('NO OPERATIONAL HISTORY  ·  NO PAST EVENTS  ·  NO FOOTAGE', CXo, 1000);
+  // sits in the gap between the subtitle and the bowl; the bottom band belongs to the TWIN line
+  ctx.fillStyle = C.amber; ctx.font = '800 20px system-ui'; ctx.textAlign = 'left';
+  ctx.fillText('NO OPERATIONAL HISTORY  ·  NO PAST EVENTS  ·  NO FOOTAGE', 120, 392);
   ctx.restore();
 }
 
@@ -433,6 +435,8 @@ document.addEventListener('keydown', e => {
 function fit() { const s = Math.min(innerWidth / 1920, innerHeight / 1080); $('stage').style.transform = `translate(-50%,-50%) scale(${s})`; }
 addEventListener('resize', fit); fit();
 render(0); requestAnimationFrame(loop);
+/* deep link to a moment: vision.html#t=44 shows that frame paused (used for stills) */
+{ const m = location.hash.match(/t=([\d.]+)/); if (m) { $('hint').style.display = 'none'; seek(parseFloat(m[1])); } }
 </script>
 </body>
 </html>
