@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Where Else It Applies</title>
+<meta name="description" content="46-second concept reel: the same sightline + routing engine applied to a transit platform, steward posts, exit-sign visibility and a temporary venue. Concept only — nothing here is a measurement.">
+<style>
+  :root{
+    color-scheme:dark;
+    --bg:#070b14; --paper:#0b1220; --grid:rgba(120,170,255,.07); --line:#8fb8ff; --line2:rgba(143,184,255,.45);
+    --ink:#eef2ff; --ink2:#a9b4cc; --muted:#5f6b85; --amber:#f0b429; --red:#e0524f; --green:#41c489; --cyan:#4fd1e8;
+  }
+  :root[data-theme="light"]{ color-scheme:dark }
+  *{box-sizing:border-box;margin:0}
+  html,body{height:100%;background:var(--bg);color:var(--ink);overflow:hidden;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+  #wrap{position:fixed;inset:0;background:var(--bg)}
+  #stage{position:absolute;left:50%;top:50%;width:1920px;height:1080px;transform-origin:center;transform:translate(-50%,-50%) scale(1);overflow:hidden;
+         background:var(--paper);
+         background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+         background-size:40px 40px}
+  canvas{position:absolute;inset:0;width:1920px;height:1080px}
+  .t{position:absolute;opacity:0;will-change:opacity,transform;letter-spacing:-.02em;line-height:1.08;text-shadow:0 2px 24px rgba(0,0,0,.7)}
+  .stamp{position:absolute;left:120px;top:56px;font-size:16px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--amber);
+         border:2px solid var(--amber);padding:6px 12px;border-radius:4px;opacity:.9;transition:opacity .4s}
+  .eyebrow{font-size:18px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);left:120px;top:118px}
+  .h1{font-size:60px;font-weight:650;left:120px;top:150px;max-width:1150px}
+  .sub{font-size:27px;font-weight:450;color:var(--ink2);left:120px;top:232px;max-width:1150px;letter-spacing:-.005em}
+  .ans{font-size:20px;font-weight:600;color:var(--cyan);left:120px;bottom:82px;letter-spacing:.01em;max-width:1150px}
+  .ans::before{content:"TWIN  \2192  ";color:var(--muted);letter-spacing:.14em;font-size:15px}
+  .center{left:0;right:0;top:0;bottom:0;display:grid;place-items:center;text-align:center;max-width:none}
+  .big{font-size:78px}
+  .foot{font-size:18px;color:var(--muted);left:120px;bottom:36px;letter-spacing:.01em}
+  .tag{position:absolute;opacity:0;right:120px;top:118px;text-align:right}
+  .tag .k{font-size:15px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+  .tag .v{font-size:40px;font-weight:700;letter-spacing:-.02em;margin-top:2px;color:var(--amber)}
+
+  /* ---- use-case rail: fills in one by one, then travels to centre ---- */
+  #rail{position:absolute;right:120px;top:330px;width:380px;transition:transform 1.1s cubic-bezier(.2,.8,.2,1),width 1.1s cubic-bezier(.2,.8,.2,1)}
+  #rail .hd{font-size:14px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;opacity:0;transition:opacity .5s}
+  .ri{display:grid;grid-template-columns:44px 1fr;gap:12px;align-items:start;padding:12px 12px 12px 8px;border-left:2px solid rgba(143,184,255,.18);
+      opacity:0;transform:translateX(28px);transition:opacity .55s ease,transform .55s cubic-bezier(.2,.8,.2,1),border-color .4s,background .4s}
+  .ri.show{opacity:1;transform:none}
+  .ri.active{border-left-color:var(--amber);background:rgba(240,180,41,.07)}
+  .ri.done{border-left-color:var(--green)}
+  .ri .n{font-size:15px;font-weight:700;letter-spacing:.1em;color:var(--muted);padding-top:4px;font-variant-numeric:tabular-nums}
+  .ri.active .n{color:var(--amber)} .ri.done .n{color:var(--green)}
+  .ri b{display:block;font-size:22px;font-weight:650;letter-spacing:-.01em}
+  .ri i{display:block;font-style:normal;font-size:15px;color:var(--ink2);margin-top:3px;line-height:1.3}
+  .ri.done i{color:var(--muted)}
+  #rail.centre{right:auto;left:50%;top:50%;width:640px;transform:translate(-50%,-56%) scale(1.06)}
+  #rail.centre .hd{opacity:1}
+  #rail.centre .ri{border-left-color:rgba(143,184,255,.35);background:transparent}
+  #engine{position:absolute;left:0;right:0;top:0;bottom:0;display:grid;place-items:end center;padding-bottom:150px;opacity:0;text-align:center;transition:opacity .8s}
+  #engine .one{font-size:22px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+  #engine .nv{font-size:44px;font-weight:750;letter-spacing:-.02em;margin-top:8px}
+  #engine .nv span{color:#76b900}      /* NVIDIA green, used only for the product name */
+  #engine .st{font-size:19px;color:var(--ink2);margin-top:8px;letter-spacing:.02em}
+
+  #hud{position:absolute;left:0;right:0;bottom:0;height:4px;background:rgba(255,255,255,.08);transition:opacity .4s}
+  #hud i{display:block;height:100%;width:0;background:var(--line)}
+  #hint{position:absolute;inset:0;display:grid;place-items:center;background:rgba(7,11,20,.88);font-size:26px;color:var(--ink2);cursor:pointer;text-align:center;line-height:1.6;transition:opacity .35s}
+  #hint b{color:var(--ink);font-size:34px;display:block;margin-bottom:10px}
+  #hint small{display:block;font-size:17px;color:var(--muted);margin-top:18px;letter-spacing:.06em}
+  .hide{opacity:0!important;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="wrap"><div id="stage">
+  <canvas id="cv" width="1920" height="1080"></canvas>
+  <div class="stamp" id="stamp">Concept &middot; not a measurement</div>
+
+  <div class="t h1 center big" id="v0h">Where else it applies</div>
+  <div class="t sub center" id="v0s" style="top:200px">Same engine. Different building.</div>
+
+  <div class="t eyebrow" id="v1e">01 &middot; Transit &middot; platform</div>
+  <div class="t h1" id="v1h">No parking. Every visitor arrives by train.</div>
+  <div class="t sub" id="v1s">Can the platform clear before the next one?</div>
+  <div class="t ans" id="v1a">unload &rarr; stairs &rarr; clear time against the headway. The stair that chokes shows itself.</div>
+  <div class="tag" id="v1t"><div class="k">Next train</div><div class="v"><span id="v1n">90</span> s</div></div>
+
+  <div class="t eyebrow" id="v2e">02 &middot; Stewards &middot; sightlines</div>
+  <div class="t h1" id="v2h">Cameras aren&rsquo;t the only eyes.</div>
+  <div class="t sub" id="v2s">Where should stewards stand?</div>
+  <div class="t ans" id="v2a">same ray-cast, a person instead of a lens. Move a post, watch the red shrink.</div>
+
+  <div class="t eyebrow" id="v3e">03 &middot; Wayfinding &middot; fire code</div>
+  <div class="t h1" id="v3h">Can a person here see a way out?</div>
+  <div class="t sub" id="v3s">Exit-sign visibility is a legal requirement.</div>
+  <div class="t ans" id="v3a">a ray from every square metre to every exit sign. Red means a pillar is in the way.</div>
+
+  <div class="t eyebrow" id="v4e">04 &middot; Temporary venues</div>
+  <div class="t h1" id="v4h">This venue doesn&rsquo;t exist yet.</div>
+  <div class="t sub" id="v4s">Simulation is the only rehearsal it will ever get.</div>
+  <div class="t ans" id="v4a">the venue exists in simulation before it exists in steel. Every test above runs on it.</div>
+
+  <div class="t h1 center" id="v5h" style="top:-560px;font-size:54px">One engine. Four questions.</div>
+
+  <div id="rail">
+    <div class="hd">What the same engine answers</div>
+    <div class="ri" id="r1"><span class="n">01</span><div><b>Transit platform</b><i>Will it clear before the next train?</i></div></div>
+    <div class="ri" id="r2"><span class="n">02</span><div><b>Steward posts</b><i>Where should the eyes on the ground stand?</i></div></div>
+    <div class="ri" id="r3"><span class="n">03</span><div><b>Exit-sign visibility</b><i>Can every square metre see a way out?</i></div></div>
+    <div class="ri" id="r4"><span class="n">04</span><div><b>Temporary venues</b><i>Rehearse a building with no past.</i></div></div>
+  </div>
+  <div id="engine"><div><div class="one">Built on</div><div class="nv"><span>NVIDIA</span> Isaac Sim &middot; Omniverse</div><div class="st">OpenUSD twin &middot; PhysX ray-cast &middot; routed crowds &middot; RTX render</div></div></div>
+
+  <div class="t foot" id="foot">Illustrative motion on the proxy venue &middot; no figures shown because none were measured for these cases</div>
+
+  <div id="hud"><i id="bar"></i></div>
+  <div id="hint"><div><b>Where else it applies &mdash; 46 s</b>Click or press <kbd>Space</kbd> to play<small>R restart &nbsp;&middot;&nbsp; &larr; &rarr; skip 5 s &nbsp;&middot;&nbsp; F fullscreen &nbsp;&middot;&nbsp; H hide bar</small></div></div>
+</div></div>
+
+<script id="payload" type="application/json">{
+  "name": "stadium_section_proxy_v1",
+  "size": {
+    "x": 60.0,
+    "y": 40.0
+  },
+  "wall_height": 4.0,
+  "wall_thickness": 0.4,
+  "barrier": {
+    "y": 20.0,
+    "height": 1.2,
+    "thickness": 0.3
+  },
+  "gates": {
+    "G1": {
+      "x0": 18.0,
+      "x1": 21.0,
+      "open": true
+    },
+    "G2": {
+      "x0": 39.0,
+      "x1": 42.0,
+      "open": true
+    },
+    "G3": {
+      "x0": 28.5,
+      "x1": 31.5,
+      "open": false
+    }
+  },
+  "exits": {
+    "E1": {
+      "x0": 8.0,
+      "x1": 11.0,
+      "open": true
+    },
+    "E2": {
+      "x0": 28.5,
+      "x1": 31.5,
+      "open": true
+    },
+    "E3": {
+      "x0": 49.0,
+      "x1": 52.0,
+      "open": true
+    }
+  },
+  "stands": [
+    {
+      "id": "S1",
+      "x0": 2.0,
+      "x1": 18.0
+    },
+    {
+      "id": "S2",
+      "x0": 22.0,
+      "x1": 38.0
+    },
+    {
+      "id": "S3",
+      "x0": 42.0,
+      "x1": 58.0
+    }
+  ],
+  "stand_tiers": 5,
+  "stand_y0": 24.0,
+  "stand_depth": 16.0,
+  "stand_rise": 5.0,
+  "pillars": [
+    {
+      "id": "P1",
+      "x": 15.0,
+      "y": 10.0
+    },
+    {
+      "id": "P2",
+      "x": 30.0,
+      "y": 10.0
+    },
+    {
+      "id": "P3",
+      "x": 45.0,
+      "y": 10.0
+    },
+    {
+      "id": "P4",
+      "x": 30.0,
+      "y": 26.0
+    }
+  ]
+}</script>
+<script>
+'use strict';
+const V = JSON.parse(document.getElementById('payload').textContent);
+const DUR = 46;
+const $ = id => document.getElementById(id);
+const clamp01 = x => Math.max(0, Math.min(1, x));
+const eo = x => 1 - Math.pow(1 - clamp01(x), 3);
+const eio = x => { x = clamp01(x); return x < .5 ? 4*x*x*x : 1 - Math.pow(-2*x + 2, 3) / 2; };
+const lerp = (a, b, t) => a + (b - a) * t;
+const seg = (t, a, b) => clamp01((t - a) / (b - a));
+const fade = (el, o, dy = 0) => { el.style.opacity = o; el.style.transform = `translateY(${dy}px)`; };
+const fadeIn = (el, t, a, b, dy = 14) => fade(el, eo(seg(t, a, b)), dy * (1 - eo(seg(t, a, b))));
+const fadeOut = (el, t, a, b) => fade(el, 1 - eo(seg(t, a, b)));
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const C = { line: css('--line'), line2: css('--line2'), ink: css('--ink'), amber: css('--amber'), red: css('--red'), green: css('--green'), cyan: css('--cyan'), muted: css('--muted') };
+const cv = $('cv'), ctx = cv.getContext('2d');
+const dpr = Math.min(2, window.devicePixelRatio || 1);
+cv.width = 1920 * dpr; cv.height = 1080 * dpr; ctx.scale(dpr, dpr);
+
+let seed = 7; const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+
+/* ---------------------------------------------------------- geometry helpers */
+function segHitsRect(ax, ay, bx, by, r) {
+  let t0 = 0, t1 = 1; const dx = bx - ax, dy = by - ay;
+  for (const [p, q] of [[-dx, ax - r[0]], [dx, r[2] - ax], [-dy, ay - r[1]], [dy, r[3] - ay]]) {
+    if (p === 0) { if (q < 0) return false; continue; }
+    const tt = q / p;
+    if (p < 0) { if (tt > t1) return false; if (tt > t0) t0 = tt; }
+    else { if (tt < t0) return false; if (tt < t1) t1 = tt; }
+  }
+  return true;
+}
+// plan sits left of the rail
+const W = V.size.x, H = V.size.y, SC = 17, OX = 190, OY = 300;
+const X = m => OX + m * SC, Y = m => OY + (H - m) * SC;
+const occluders = [];
+for (const p of V.pillars) occluders.push([p.x - .5, p.y - .5, p.x + .5, p.y + .5]);
+{ const gates = Object.values(V.gates).filter(g => g.open).sort((a, b) => a.x0 - b.x0); let cur = 0;
+  for (const g of gates) { if (g.x0 > cur) occluders.push([cur, V.barrier.y - .15, g.x0, V.barrier.y + .15]); cur = g.x1; }
+  if (cur < W) occluders.push([cur, V.barrier.y - .15, W, V.barrier.y + .15]); }
+const nBarrier = occluders.length - V.pillars.length;
+for (const s of V.stands) occluders.push([s.x0, V.stand_y0, s.x1, V.stand_y0 + V.stand_depth]);
+
+function drawPlan(alpha = 1) {
+  ctx.save(); ctx.globalAlpha = alpha;
+  ctx.fillStyle = 'rgba(143,184,255,.04)'; ctx.fillRect(X(0), Y(H), W*SC, H*SC);
+  ctx.strokeStyle = C.line; ctx.lineWidth = 2; ctx.strokeRect(X(0), Y(H), W*SC, H*SC);
+  for (const s of V.stands) { ctx.fillStyle = 'rgba(143,184,255,.10)'; ctx.fillRect(X(s.x0), Y(V.stand_y0 + V.stand_depth), (s.x1-s.x0)*SC, V.stand_depth*SC);
+    ctx.strokeStyle = C.line2; ctx.lineWidth = 1; ctx.strokeRect(X(s.x0), Y(V.stand_y0 + V.stand_depth), (s.x1-s.x0)*SC, V.stand_depth*SC); }
+  ctx.fillStyle = C.line; for (const p of V.pillars) ctx.fillRect(X(p.x-.5), Y(p.y+.5), SC, SC);
+  ctx.strokeStyle = C.amber; ctx.lineWidth = 4;
+  for (const r of occluders.slice(V.pillars.length, V.pillars.length + nBarrier)) { ctx.beginPath(); ctx.moveTo(X(r[0]), Y(V.barrier.y)); ctx.lineTo(X(r[2]), Y(V.barrier.y)); ctx.stroke(); }
+  for (const e of Object.values(V.exits)) if (e.open) { ctx.fillStyle = C.amber; ctx.fillRect(X(e.x0), Y(0)-3, (e.x1-e.x0)*SC, 6); }
+  ctx.restore();
+}
+
+/* ------------------------------------------------------------- V1 platform */
+const P = { x0: 200, x1: 1380, y0: 480, y1: 700, stairs: [{ x: 470, w: 110, cap: 1.6 }, { x: 1060, w: 110, cap: 2.6 }] };
+let pax = [];
+function resetPax() { seed = 7; pax = []; for (let i = 0; i < 260; i++) pax.push({ x: P.x0 + 60 + rnd() * (P.x1 - P.x0 - 120), y: P.y0 - 30, ty: P.y0 + 30 + rnd() * (P.y1 - P.y0 - 60), v: 60 + rnd() * 35, st: -1, gone: false, wait: 0 }); }
+resetPax();
+let served = [0, 0], lastT1 = null;
+function drawPlatform(t) {
+  ctx.save();
+  ctx.strokeStyle = C.line2; ctx.lineWidth = 2; ctx.setLineDash([18, 12]);
+  for (const yy of [P.y0 - 70, P.y0 - 40, P.y1 + 40, P.y1 + 70]) { ctx.beginPath(); ctx.moveTo(120, yy); ctx.lineTo(1460, yy); ctx.stroke(); }
+  ctx.setLineDash([]);
+  ctx.fillStyle = 'rgba(143,184,255,.06)'; ctx.fillRect(P.x0, P.y0, P.x1 - P.x0, P.y1 - P.y0);
+  ctx.strokeStyle = C.line; ctx.lineWidth = 2; ctx.strokeRect(P.x0, P.y0, P.x1 - P.x0, P.y1 - P.y0);
+  ctx.fillStyle = 'rgba(224,82,79,.18)'; ctx.fillRect(P.x0, P.y0, P.x1 - P.x0, 10);
+  ctx.fillStyle = C.muted; ctx.font = '600 14px system-ui'; ctx.textAlign = 'left'; ctx.fillText('PLATFORM', P.x0 + 14, P.y1 - 12);
+  for (const s of P.stairs) { ctx.fillStyle = 'rgba(240,180,41,.18)'; ctx.fillRect(s.x, P.y1 - 8, s.w, 60); ctx.strokeStyle = C.amber; ctx.lineWidth = 2; ctx.strokeRect(s.x, P.y1 - 8, s.w, 60);
+    for (let k = 1; k < 5; k++) { ctx.beginPath(); ctx.moveTo(s.x, P.y1 - 8 + k * 12); ctx.lineTo(s.x + s.w, P.y1 - 8 + k * 12); ctx.strokeStyle = 'rgba(240,180,41,.35)'; ctx.stroke(); }
+    ctx.fillStyle = C.muted; ctx.fillText('STAIR', s.x + 6, P.y1 + 70); }
+  const tx = lerp(-1300, 160, eio(seg(t, 0, 2.2)));
+  const doors = eo(seg(t, 2.3, 2.9));
+  ctx.strokeStyle = C.cyan; ctx.lineWidth = 2;
+  for (let c = 0; c < 4; c++) { const cx = tx + c * 300; ctx.fillStyle = 'rgba(79,209,232,.16)'; ctx.fillRect(cx, P.y0 - 90, 280, 60); ctx.strokeRect(cx, P.y0 - 90, 280, 60);
+    for (let d = 0; d < 3; d++) { ctx.fillStyle = `rgba(7,11,20,${doors})`; ctx.fillRect(cx + 26 + d * 88, P.y0 - 60, 40, 28); } }
+  const dt = lastT1 === null ? 0 : Math.max(0, t - lastT1); lastT1 = t;
+  if (t < 0.05) { resetPax(); served = [0, 0]; }
+  let onPlatform = 0;
+  for (const p of pax) {
+    if (p.gone || t < 2.9) continue;
+    if (p.st < 0) { p.y = Math.min(p.ty, p.y + p.v * dt); if (p.y >= p.ty - .5) { let best = 0, bd = 1e9; P.stairs.forEach((s, i) => { const d = Math.abs(p.x - (s.x + s.w/2)); if (d < bd) { bd = d; best = i; } }); p.st = best; } }
+    else { const s = P.stairs[p.st], gx = s.x + s.w/2 + (rnd() - .5) * 60, gy = P.y1 - 6;
+      const dx = gx - p.x, dy = gy - p.y, d = Math.hypot(dx, dy);
+      if (d > 22) { p.x += dx / d * p.v * dt; p.y += dy / d * p.v * dt; }
+      else { p.wait += dt; if (served[p.st] < (t - 3) * s.cap) { served[p.st]++; p.gone = true; continue; } } }
+    onPlatform++;
+    ctx.fillStyle = p.wait > 1.5 ? C.amber : C.ink;
+    ctx.beginPath(); ctx.arc(p.x, p.y, 3.4, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+  return onPlatform;
+}
+
+/* ------------------------------------------------------------ V2 stewards */
+const stewardsA = [[10, 6], [30, 14], [50, 6]], stewardsB = [[10, 6], [30, 22.5], [50, 6]];
+const FAN = 120 * Math.PI / 180, RANGE = 16;
+function stewardSees(sx, sy, tx, ty) {
+  if (Math.hypot(tx - sx, ty - sy) > RANGE) return false;
+  for (const r of occluders) if (segHitsRect(sx, sy, tx, ty, r)) return false;
+  return true;
+}
+function drawStewards(t) {
+  drawPlan();
+  const move = eio(seg(t, 5.2, 7.2));
+  const S = stewardsA.map((a, i) => [lerp(a[0], stewardsB[i][0], move), lerp(a[1], stewardsB[i][1], move)]);
+  const reveal = eo(seg(t, 1.2, 4));
+  ctx.save();
+  for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
+    const cx = i + .5, cy = j + .5;
+    if (cy >= V.stand_y0) continue;
+    let seen = false; for (const s of S) if (stewardSees(s[0], s[1], cx, cy)) { seen = true; break; }
+    const near = Math.min(...S.map(s => Math.hypot(cx - s[0], cy - s[1])));
+    const r = clamp01((reveal * 24 - near) / 3); if (r <= 0) continue;
+    ctx.globalAlpha = r * (seen ? .28 : .16); ctx.fillStyle = seen ? C.green : C.red;
+    ctx.fillRect(X(i) + 1, Y(j + 1) + 1, SC - 2, SC - 2);
+  }
+  ctx.globalAlpha = 1;
+  for (const s of S) { const sx = X(s[0]), sy = Y(s[1]);
+    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.arc(sx, sy, RANGE * SC * reveal, -Math.PI/2 - FAN/2, -Math.PI/2 + FAN/2); ctx.closePath();
+    ctx.fillStyle = 'rgba(65,196,137,.07)'; ctx.fill(); ctx.strokeStyle = 'rgba(65,196,137,.4)'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(sx, sy - 12); ctx.lineTo(sx - 10, sy + 8); ctx.lineTo(sx + 10, sy + 8); ctx.closePath(); ctx.fillStyle = C.amber; ctx.fill(); }
+  ctx.restore();
+}
+
+/* ---------------------------------------------------------- V3 exit signs */
+function drawExitSigns(t) {
+  drawPlan();
+  const px = lerp(6, 54, eio(seg(t, .6, 7.2))), py = 9.5;
+  const signs = Object.entries(V.exits).filter(([, e]) => e.open).map(([id, e]) => ({ id, x: (e.x0 + e.x1) / 2, y: .6 }));
+  ctx.save();
+  for (const s of signs) {
+    let blocked = false; for (const r of occluders) if (segHitsRect(px, py, s.x, s.y, r)) { blocked = true; break; }
+    ctx.strokeStyle = blocked ? C.red : C.green; ctx.lineWidth = 2; ctx.setLineDash(blocked ? [6, 8] : []);
+    ctx.beginPath(); ctx.moveTo(X(px), Y(py)); ctx.lineTo(X(s.x), Y(s.y)); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = blocked ? C.red : C.green; ctx.fillRect(X(s.x) - 16, Y(s.y) - 20, 32, 16);
+    ctx.fillStyle = '#071020'; ctx.font = '700 11px system-ui'; ctx.textAlign = 'center'; ctx.fillText('EXIT', X(s.x), Y(s.y) - 8);
+  }
+  ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(X(px), Y(py), 7, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = C.ink; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(X(px), Y(py), 14, 0, Math.PI*2); ctx.stroke();
+  ctx.restore();
+}
+
+/* ------------------------------------------------------- V4 temporary venue */
+const CXo = 790, CYo = 660;
+const bowl = []; for (let k = 0; k < 10; k++) { const a = k / 10 * Math.PI * 2; bowl.push([CXo + Math.cos(a) * 500 * (k % 2 ? .82 : 1), CYo + Math.sin(a) * 290 * (k % 2 ? .82 : 1)]); }
+function drawOverlay(t) {
+  ctx.save();
+  const k = eo(seg(t, .3, 3.4));
+  let per = 0; for (let i = 0; i < bowl.length; i++) { const a = bowl[i], b = bowl[(i+1) % bowl.length]; per += Math.hypot(b[0]-a[0], b[1]-a[1]); }
+  ctx.setLineDash([per * k, per]); ctx.strokeStyle = C.line; ctx.lineWidth = 2.5;
+  ctx.beginPath(); bowl.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.closePath(); ctx.stroke(); ctx.setLineDash([]);
+  const s2 = eo(seg(t, 2.6, 4.6));
+  ctx.globalAlpha = s2; ctx.strokeStyle = C.amber; ctx.lineWidth = 2; ctx.strokeRect(CXo - 160, CYo - 80, 320, 160);
+  ctx.setLineDash([8, 8]); ctx.strokeStyle = C.line2;
+  for (const [x, y, w, h] of [[CXo - 400, CYo - 170, 200, 340], [CXo + 200, CYo - 170, 200, 340], [CXo - 260, CYo - 220, 520, 90], [CXo - 260, CYo + 130, 520, 90]]) ctx.strokeRect(x, y, w, h);
+  ctx.setLineDash([]);
+  ctx.fillStyle = C.muted; ctx.font = '600 14px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('TEMPORARY STAND', CXo - 300, CYo + 10); ctx.fillText('TEMPORARY STAND', CXo + 300, CYo + 10); ctx.fillText('COURT', CXo, CYo + 5);
+  ctx.globalAlpha = eo(seg(t, 4.4, 5.6));
+  ctx.fillStyle = C.amber; ctx.font = '800 20px system-ui'; ctx.fillText('NO OPERATIONAL HISTORY  ·  NO PAST EVENTS  ·  NO FOOTAGE', CXo, 1000);
+  ctx.restore();
+}
+
+/* ------------------------------------------------------------------ rail */
+const VIG = [[3, 13.4], [13, 23.4], [23, 31.4], [31, 38.4]];       // vignette windows
+function rail(t) {
+  VIG.forEach(([a, b], i) => {
+    const el = $('r' + (i + 1));
+    el.classList.toggle('show', t >= a + .25);
+    el.classList.toggle('active', t >= a + .25 && t < b - .4);
+    el.classList.toggle('done', t >= b - .4);
+  });
+  $('rail').classList.toggle('centre', t >= 38.6);
+  $('engine').style.opacity = t >= 41 ? 1 : 0;
+}
+
+/* ------------------------------------------------------------------ render */
+function render(t) {
+  ctx.clearRect(0, 0, 1920, 1080);
+  for (const el of document.querySelectorAll('.t,.tag')) el.style.opacity = 0;
+  $('stamp').style.opacity = t > 2.6 && t < 38.4 ? .9 : (t >= 38.4 ? .55 : 0);
+  $('foot').style.opacity = t > 3 && t < 38.2 ? 1 : 0;
+
+  if (t < 3.2) { fadeIn($('v0h'), t, .2, 1.2, 0); fadeIn($('v0s'), t, .8, 1.8, 8); if (t > 2.4) { fadeOut($('v0h'), t, 2.4, 3); fadeOut($('v0s'), t, 2.4, 3); } }
+
+  if (t >= 3 && t < 13.4) { const l = t - 3; ctx.save(); ctx.globalAlpha = l < 9.6 ? 1 : 1 - eo(seg(l, 9.6, 10.3)); const n = drawPlatform(l); ctx.restore();
+    fadeIn($('v1e'), t, 3.2, 4); fadeIn($('v1h'), t, 3.5, 4.6); fadeIn($('v1s'), t, 6, 7); fadeIn($('v1a'), t, 7.5, 8.5); fadeIn($('v1t'), t, 6.5, 7.3);
+    $('v1n').textContent = Math.max(0, Math.round(90 - (l - 3) * 22)); $('v1n').parentElement.style.color = n > 60 && l > 7 ? css('--red') : css('--amber');
+    if (l > 9.6) for (const id of ['v1e','v1h','v1s','v1a','v1t']) fadeOut($(id), l, 9.6, 10.3); }
+
+  if (t >= 13 && t < 23.4) { const l = t - 13; ctx.save(); ctx.globalAlpha = l < 9.6 ? 1 : 1 - eo(seg(l, 9.6, 10.3)); drawStewards(l); ctx.restore();
+    fadeIn($('v2e'), t, 13.2, 14); fadeIn($('v2h'), t, 13.5, 14.6); fadeIn($('v2s'), t, 16, 17); fadeIn($('v2a'), t, 18.4, 19.4);
+    if (l > 9.6) for (const id of ['v2e','v2h','v2s','v2a']) fadeOut($(id), l, 9.6, 10.3); }
+
+  if (t >= 23 && t < 31.4) { const l = t - 23; ctx.save(); ctx.globalAlpha = l < 7.6 ? 1 : 1 - eo(seg(l, 7.6, 8.3)); drawExitSigns(l); ctx.restore();
+    fadeIn($('v3e'), t, 23.2, 24); fadeIn($('v3h'), t, 23.5, 24.6); fadeIn($('v3s'), t, 25.6, 26.6); fadeIn($('v3a'), t, 27.4, 28.4);
+    if (l > 7.6) for (const id of ['v3e','v3h','v3s','v3a']) fadeOut($(id), l, 7.6, 8.3); }
+
+  if (t >= 31 && t < 38.6) { const l = t - 31; ctx.save(); ctx.globalAlpha = l < 6.6 ? 1 : 1 - eo(seg(l, 6.6, 7.3)); drawOverlay(l); ctx.restore();
+    fadeIn($('v4e'), t, 31.2, 32); fadeIn($('v4h'), t, 31.5, 32.6); fadeIn($('v4s'), t, 33.6, 34.6); fadeIn($('v4a'), t, 35.2, 36.2);
+    if (l > 6.6) for (const id of ['v4e','v4h','v4s','v4a']) fadeOut($(id), l, 6.6, 7.3); }
+
+  if (t >= 39.4) fadeIn($('v5h'), t, 39.6, 40.6, 8);
+  rail(t);
+  $('bar').style.width = (100 * clamp01(t / DUR)) + '%';
+}
+
+/* --------------------------------------------------------- clock + controls */
+let playing = false, t0 = 0, acc = 0;
+const now = () => performance.now() / 1000;
+const cur = () => playing ? acc + (now() - t0) : acc;
+function play() { if (cur() >= DUR) acc = 0; t0 = now(); playing = true; $('hint').classList.add('hide'); }
+function pause() { acc = cur(); playing = false; }
+function seek(s) { acc = clamp01(s / DUR) * DUR; t0 = now(); lastT1 = null; if (acc < 3) resetPax(); render(acc); }
+function loop() { const t = cur(); render(t); if (t >= DUR && playing) { playing = false; acc = DUR; } requestAnimationFrame(loop); }
+$('hint').addEventListener('click', play);
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space') { e.preventDefault(); playing ? pause() : play(); }
+  else if (e.key === 'r' || e.key === 'R') { seek(0); play(); }
+  else if (e.key === 'ArrowRight') seek(cur() + 5);
+  else if (e.key === 'ArrowLeft') seek(cur() - 5);
+  else if (e.key === 'f' || e.key === 'F') { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen(); }
+  else if (e.key === 'h' || e.key === 'H') $('hud').classList.toggle('hide');
+});
+function fit() { const s = Math.min(innerWidth / 1920, innerHeight / 1080); $('stage').style.transform = `translate(-50%,-50%) scale(${s})`; }
+addEventListener('resize', fit); fit();
+render(0); requestAnimationFrame(loop);
+</script>
+</body>
+</html>

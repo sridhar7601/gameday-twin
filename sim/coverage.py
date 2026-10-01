@@ -32,7 +32,11 @@ ap.add_argument("--cameras", default=os.path.join(os.path.dirname(__file__), "ca
 ap.add_argument("--set", default="A")
 ap.add_argument("--out", required=True)
 ap.add_argument("--grid", type=float, default=1.0, help="cell size in metres")
-ap.add_argument("--target-z", type=float, default=1.0, help="height of the test point (m)")
+ap.add_argument("--target-z", type=float, default=1.0, help="test-point height above the walking surface (m)")
+ap.add_argument("--target-mode", choices=["terrain", "floor"], default="terrain",
+                help="terrain: test point rides the stand tiers, so seated areas are measured "
+                     "where people actually are. floor: 1 m above z=0 everywhere -- which puts "
+                     "the point INSIDE the solid stand blocks and counts them blind by construction.")
 ap.add_argument("--stills", action="store_true", help="also render one RGB still per camera")
 ap.add_argument("--still-res", default="1280x720")
 args = ap.parse_args()
@@ -116,6 +120,39 @@ cams = cams_cfg["sets"][args.set]
 nx, ny = int(round(W / args.grid)), int(round(H / args.grid))
 xs = (np.arange(nx) + 0.5) * args.grid
 ys = (np.arange(ny) + 0.5) * args.grid
+
+
+def surface_z(x, y):
+    """Height of the walking surface at (x, y): a stand tier, or the floor.
+
+    People on a stand are on top of its tiers, not inside the block. With
+    --target-mode floor the test point sits inside the solid block and every
+    seating cell is counted blind by construction, which is meaningless.
+    """
+    if args.target_mode == "floor":
+        return 0.0
+    y0, depth, rise, tiers = venue["stand_y0"], venue["stand_depth"], venue["stand_rise"], venue["stand_tiers"]
+    for s in venue["stands"]:
+        if s["x0"] <= x < s["x1"] and y0 <= y < y0 + depth:
+            tier = min(tiers - 1, int((y - y0) / depth * tiers))
+            return rise * (tier + 1) / tiers
+    return 0.0
+
+
+def region_of(x, y):
+    """concourse | stands | excluded (pillar footprints are not walkable)."""
+    for p in venue["pillars"]:
+        if abs(x - p["x"]) < 0.5 and abs(y - p["y"]) < 0.5:
+            return "excluded"
+    y0, depth = venue["stand_y0"], venue["stand_depth"]
+    for s in venue["stands"]:
+        if s["x0"] <= x < s["x1"] and y0 <= y < y0 + depth:
+            return "stands"
+    return "concourse"
+
+
+region = np.array([[region_of(x, y) for x in xs] for y in ys])
+measured = region != "excluded"
 vis = np.zeros((ny, nx), dtype=np.int16)  # how many cameras see each cell
 per_cam = []
 sq = get_physx_scene_query_interface()
@@ -128,7 +165,9 @@ for cam in cams:
     rays = blocked = out_of_view = 0
     for j, y in enumerate(ys):
         for i, x in enumerate(xs):
-            tgt = np.array([x, y, args.target_z])
+            if not measured[j, i]:
+                continue
+            tgt = np.array([x, y, surface_z(x, y) + args.target_z])
             d = tgt - pos
             if not in_frustum(f, r, u, d, hfov, vfov):
                 out_of_view += 1
@@ -136,34 +175,56 @@ for cam in cams:
             dist = float(np.linalg.norm(d))
             dirn = d / dist
             rays += 1
-            # Stop the ray 5 cm before the target so the floor under the target never counts.
+            # Stop the ray 5 cm before the target so the surface under the target never counts.
             hit = sq.raycast_closest(carb.Float3(*pos), carb.Float3(*dirn), dist - 0.05)
             if hit["hit"]:
                 blocked += 1
             else:
                 seen[j, i] = True
     vis += seen
-    cov = float(seen.mean())
+    n_meas = int(measured.sum())
     per_cam.append({
         "id": cam["id"], "pos": cam["pos"], "look_at": cam["look_at"],
-        "coverage_pct": round(100 * cov, 2),
+        "coverage_pct": round(100 * seen.sum() / n_meas, 2),
+        "concourse_pct": round(100 * seen[region == "concourse"].mean(), 2),
+        "stands_pct": round(100 * seen[region == "stands"].mean(), 2),
         "cells_visible": int(seen.sum()), "cells_in_frustum": rays,
         "cells_blocked_by_geometry": blocked, "cells_out_of_view": out_of_view,
     })
-    print(f"[{cam['id']}] coverage {100*cov:.1f}%  in-frustum {rays}  blocked {blocked}")
+    print(f"[{cam['id']}] coverage {per_cam[-1]['coverage_pct']:.1f}%  "
+          f"(concourse {per_cam[-1]['concourse_pct']:.1f}%, stands {per_cam[-1]['stands_pct']:.1f}%)  "
+          f"in-frustum {rays}  blocked {blocked}")
 
 union = vis > 0
+grid_out = np.where(measured, vis, -1)     # -1 marks cells that are not walkable (pillars)
+
+
+def _region_stats(name):
+    m = region == name
+    return {"m2": float(m.sum() * args.grid ** 2),
+            "union_coverage_pct": round(100 * float(union[m].mean()), 2),
+            "uncovered_m2": round(float((~union & m).sum()) * args.grid ** 2, 1),
+            "covered_by_2plus_pct": round(100 * float((vis[m] >= 2).mean()), 2)}
+
+
 result = {
-    "venue": venue["name"], "camera_set": args.set, "grid_m": args.grid, "target_z_m": args.target_z,
-    "hfov_deg": cams_cfg["hfov_deg"], "floor_m2": W * H, "cells": int(nx * ny),
-    "union_coverage_pct": round(100 * float(union.mean()), 2),
-    "uncovered_m2": round(float((~union).sum()) * args.grid * args.grid, 1),
-    "covered_by_2plus_pct": round(100 * float((vis >= 2).mean()), 2),
+    "venue": venue["name"], "camera_set": args.set, "grid_m": args.grid,
+    "target_z_m": args.target_z, "target_mode": args.target_mode,
+    "hfov_deg": cams_cfg["hfov_deg"],
+    "floor_m2": float(measured.sum() * args.grid ** 2), "cells": int(measured.sum()),
+    "excluded_m2": float((~measured).sum() * args.grid ** 2),
+    "union_coverage_pct": round(100 * float(union[measured].mean()), 2),
+    "uncovered_m2": round(float((~union & measured).sum()) * args.grid ** 2, 1),
+    "covered_by_2plus_pct": round(100 * float((vis[measured] >= 2).mean()), 2),
+    "regions": {"concourse": _region_stats("concourse"), "stands": _region_stats("stands")},
     "per_camera": per_cam,
-    "visibility_grid": vis.tolist(),        # rows = y (south→north), cols = x (west→east)
+    "visibility_grid": grid_out.tolist(),   # rows = y (south→north), cols = x (west→east); -1 = not walkable
     "provenance": {
         "isaac_sim_version": _isaac_version(), "instance_type": _instance_type(),
-        "git_hash": _git_hash(), "method": "PhysX raycast_closest, camera→target at target_z, blocked if any collider hit before target",
+        "git_hash": _git_hash(),
+        "method": ("PhysX raycast_closest, camera→target at (walking surface + target_z); "
+                   "target rides the stand tiers in terrain mode; blocked if any collider hit before target; "
+                   "pillar footprints excluded"),
         "elapsed_s": round(time.time() - t0, 1), "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     },
 }

@@ -1,0 +1,63 @@
+{
+ "source": "remeasure.log, gameday-twin-2 (i-040a361e365a8f6f2), Isaac Sim 6.0.1 container, A10G, 2026-09-30T19:54Z",
+ "target_mode": "terrain",
+ "grid_m": 1.0,
+ "target_z_m": 1.0,
+ "A": {
+  "union_coverage_pct": 90.58,
+  "uncovered_m2": 226.0,
+  "per_camera": {
+   "C1": [
+    76.6,
+    72.1,
+    86.1
+   ],
+   "C2": [
+    76.6,
+    72.1,
+    86.1
+   ],
+   "C3": [
+    11.7,
+    8.0,
+    19.5
+   ],
+   "C4": [
+    11.7,
+    8.0,
+    19.5
+   ]
+  }
+ },
+ "B": {
+  "union_coverage_pct": 92.17,
+  "uncovered_m2": 188.0,
+  "per_camera": {
+   "C1": [
+    76.6,
+    72.1,
+    86.1
+   ],
+   "C2": [
+    76.6,
+    72.1,
+    86.1
+   ],
+   "C3": [
+    54.3,
+    68.4,
+    24.5
+   ],
+   "C4": [
+    11.7,
+    8.0,
+    19.5
+   ]
+  }
+ },
+ "per_camera_columns": [
+  "whole_floor_pct",
+  "concourse_pct",
+  "stands_pct"
+ ]
+}

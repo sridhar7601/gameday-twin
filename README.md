@@ -19,22 +19,32 @@ questions a venue safety team asks before an event:
 | Renders | Not produced in this build — `coverage.py --stills` exists but was not run. |
 | Smoke (Flow), ML perception tests | **Roadmap** — not run. (`omni.flowusd` is confirmed present in the container.) |
 
-## Measured result (2026-09-30)
+## Measured result (2026-09-30, corrected re-measure 19:54Z)
 
-Camera set A, four cameras at 90° HFOV on the perimeter at 5 m:
+Camera set A: four cameras, 90° HFOV, 5 m on the perimeter. Test point rides the stand
+tiers (`--target-mode terrain`), so seated areas are measured where people actually are;
+pillar footprints excluded.
 
-| Metric | Value |
-|---|---|
-| Floor seen by ≥1 camera | **64.58 %** of 2,400 m² |
-| Floor no camera sees | **850 m²** (35.4 %) |
-| Floor seen by ≥2 cameras | 45.0 % |
-| C1 / C2 | 54.0 % each |
-| C3 / C4 | **5.46 %** each — 2,046 cells blocked by the stand blocks |
+| Metric | Set A | Set B (C3 moved to mid north wall) |
+|---|---|---|
+| Union coverage, whole floor | **90.6 %** | **92.2 %** |
+| Floor no camera sees | **226 m²** (all concourse) | **188 m²** (all concourse) |
+| Concourse covered (1,632 m²) | 86.2 % | 88.5 % |
+| Seating covered (768 m²) | 100 % | 100 % |
+| C1 / C2 | 76.6 % (concourse 72.1, seating 86.1) | same |
+| C3 | **11.7 %** (concourse 8.0, seating 19.5) | **54.3 %** (concourse 68.4, seating 24.5) |
+| C4 | 11.7 % | 11.7 % |
 
-C1/C2 and C3/C4 match exactly because the venue and camera rig are symmetric about the
-hall centre line — a consistency check, not duplicated data. Ray-cast time 0.9 s.
+C1≡C2 and C3≡C4 in set A because the venue and rig are symmetric — a consistency check,
+not duplicated data. Ray-cast time 0.6 s per set.
 
-Open `app/index.html` in any browser (no server, no network) to see it.
+**Superseded:** the first run (`coverage_A.json`, floor mode) reported 850 m² unseen. 624 m²
+of that was the *inside* of the solid stand blocks (test point at 1 m above z=0 is inside
+the geometry), which is meaningless. The concourse figure (226 m²) was identical in both
+modes, as expected — surface height is zero there.
+
+Open `app/index.html` (certificate), `app/cinematic.html` (70 s measured film) or
+`app/vision.html` (46 s concept reel — explicitly not a measurement).
 
 ### Known gaps in this run
 - `coverage.py` crashes in `simulation_app.close()` *after* writing results — cosmetic, the JSON is complete.

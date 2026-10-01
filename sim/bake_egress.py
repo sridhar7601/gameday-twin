@@ -31,15 +31,15 @@ import os
 import random
 import sys
 
-from pxr import Gf, Sdf, Usd, UsdGeom, UsdLux
-
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from venue_def import segments as _segments  # noqa: E402
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--venue", required=True)
-ap.add_argument("--out", required=True)
+ap.add_argument("--out", help="output .usd; omit to skip USD authoring (no pxr needed)")
 ap.add_argument("--report", required=True)
+ap.add_argument("--tracks", help="also write compact per-person routes as JSON "
+                                 "(path + start time + speed), for replay outside Isaac Sim")
 ap.add_argument("--people", type=int, default=450)
 ap.add_argument("--seed", type=int, default=42)
 ap.add_argument("--fps", type=float, default=12.0, help="time samples per second")
@@ -215,40 +215,56 @@ t90 = round(times[int(.9 * N)], 1) if len(times) > N * .9 else None
 t100 = round(times[-1], 1) if len(times) == N else None
 
 # ------------------------------------------------------------------ write USD
-stage = Usd.Stage.CreateNew(args.out)
-UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.z)
-UsdGeom.SetStageMetersPerUnit(stage, 1.0)
-world = UsdGeom.Xform.Define(stage, "/World")
-stage.SetDefaultPrim(world.GetPrim())
-stage.SetStartTimeCode(0)
-stage.SetEndTimeCode(nframes - 1)
-stage.SetTimeCodesPerSecond(args.fps)
-stage.SetFramesPerSecond(args.fps)
+if args.out:
+    # Imported here, not at the top, so the routing and the tracks export run on
+    # any machine with plain Python -- pxr only exists inside Isaac Sim.
+    from pxr import Gf, Usd, UsdGeom, UsdLux
 
-ov = stage.OverridePrim("/World/Venue")
-ov.GetReferences().AddReference(os.path.abspath(args.venue), "/World/Venue")
+    stage = Usd.Stage.CreateNew(args.out)
+    UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.z)
+    UsdGeom.SetStageMetersPerUnit(stage, 1.0)
+    world = UsdGeom.Xform.Define(stage, "/World")
+    stage.SetDefaultPrim(world.GetPrim())
+    stage.SetStartTimeCode(0)
+    stage.SetEndTimeCode(nframes - 1)
+    stage.SetTimeCodesPerSecond(args.fps)
+    stage.SetFramesPerSecond(args.fps)
 
-proto = UsdGeom.Scope.Define(stage, "/World/Crowd/proto")
-body = UsdGeom.Capsule.Define(stage, "/World/Crowd/proto/person")
-body.CreateRadiusAttr(0.22)
-body.CreateHeightAttr(1.25)
-body.CreateAxisAttr("Z")
-body.CreateDisplayColorAttr([Gf.Vec3f(0.90, 0.32, 0.20)])
-UsdGeom.Xformable(body).AddTranslateOp().Set(Gf.Vec3d(0, 0, 0.85))
+    ov = stage.OverridePrim("/World/Venue")
+    ov.GetReferences().AddReference(os.path.abspath(args.venue), "/World/Venue")
 
-inst = UsdGeom.PointInstancer.Define(stage, "/World/Crowd")
-inst.CreatePrototypesRel().SetTargets([body.GetPath()])
-pos_attr = inst.CreatePositionsAttr()
-idx_attr = inst.CreateProtoIndicesAttr()
-maxn = max(len(f) for f in positions_per_frame)
-for f, frame in enumerate(positions_per_frame):
-    pts = [Gf.Vec3f(x, y, 0.0) for (x, y) in frame]
-    pts += [Gf.Vec3f(0, 0, -50.0)] * (maxn - len(pts))   # park the departed below the floor
-    pos_attr.Set(pts, Usd.TimeCode(f))
-    idx_attr.Set([0] * maxn, Usd.TimeCode(f))
+    proto = UsdGeom.Scope.Define(stage, "/World/Crowd/proto")
+    body = UsdGeom.Capsule.Define(stage, "/World/Crowd/proto/person")
+    body.CreateRadiusAttr(0.22)
+    body.CreateHeightAttr(1.25)
+    body.CreateAxisAttr("Z")
+    body.CreateDisplayColorAttr([Gf.Vec3f(0.90, 0.32, 0.20)])
+    UsdGeom.Xformable(body).AddTranslateOp().Set(Gf.Vec3d(0, 0, 0.85))
 
-UsdLux.DomeLight.Define(stage, "/World/EgressLight").CreateIntensityAttr(900.0)
-stage.GetRootLayer().Save()
+    inst = UsdGeom.PointInstancer.Define(stage, "/World/Crowd")
+    inst.CreatePrototypesRel().SetTargets([body.GetPath()])
+    pos_attr = inst.CreatePositionsAttr()
+    idx_attr = inst.CreateProtoIndicesAttr()
+    maxn = max(len(f) for f in positions_per_frame)
+    for f, frame in enumerate(positions_per_frame):
+        pts = [Gf.Vec3f(x, y, 0.0) for (x, y) in frame]
+        pts += [Gf.Vec3f(0, 0, -50.0)] * (maxn - len(pts))   # park the departed below the floor
+        pos_attr.Set(pts, Usd.TimeCode(f))
+        idx_attr.Set([0] * maxn, Usd.TimeCode(f))
+
+    UsdLux.DomeLight.Define(stage, "/World/EgressLight").CreateIntensityAttr(900.0)
+    stage.GetRootLayer().Save()
+
+# ------------------------------------------------------ compact tracks (replay)
+if args.tracks:
+    # Route polylines are tiny compared with per-frame positions, and a player can
+    # interpolate along them -- this is what the cinematic page consumes.
+    tracks = [{"p": [[round(x, 2), round(y, 2)] for (x, y) in p["path"]],
+               "t0": round(p["t0"], 2), "v": round(p["speed"], 3), "exit": p["exit"]}
+              for p in people]
+    with open(args.tracks, "w") as fh:
+        json.dump({"venue": venue["name"], "seed": args.seed, "people": N,
+                   "gates_open": sorted(gate_counts), "tracks": tracks}, fh, separators=(",", ":"))
 
 report = {
     "venue": venue["name"], "scenario": "egress_routing", "seed": args.seed,
@@ -264,7 +280,8 @@ report = {
 }
 json.dump(report, open(args.report, "w"), indent=1)
 
-print(f"wrote {args.out}  ({nframes} frames @ {args.fps} fps, {N} people)")
+print(f"wrote {args.out or '(no usd)'}  ({nframes} frames @ {args.fps} fps, {N} people)"
+      + (f"  tracks -> {args.tracks}" if args.tracks else ""))
 print(f"  gate throughput: {gate_counts}")
 print(f"  exit throughput: {exit_counts}")
 print(f"  cleared: 50% {t50}s | 90% {t90}s | 100% {t100}s")
