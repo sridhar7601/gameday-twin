@@ -100,9 +100,19 @@ So NVIDIA's crowd-animation system is **not** available in this image. Crowds mu
 authored yourself — see [`sim/bake_egress.py`](../sim/bake_egress.py), which writes agent
 positions as USD time samples so the timeline plays them back.
 
-NVIDIA photoreal People assets were **not** reachable at the guessed S3 paths under
-`https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/6.0/` —
-they 404'd. Find the correct path from the GUI Content browser before relying on them.
+NVIDIA's People assets **are** reachable — but not at guessed paths. Ask Isaac Sim for its
+own root instead of guessing (`sim/probe_people.py`):
+```python
+from isaacsim.storage.native import get_assets_root_path
+root = get_assets_root_path()   # .../Assets/Isaac/6.0 for this build
+```
+Under `{root}/Isaac/People/` there are `Characters/` (business, medical, police,
+construction; `F_Business_02/F_Business_02.usd` is a Z-up SkelRoot with a 101-joint
+skeleton), `DH_Characters/` (23 digital humans) and `Animations/` (walk loops such as
+`stand_walk_loop_in_place.skelanim.usd`, 81 joints, 30 fps, Y-up, centimetres). They are
+plain UsdSkel assets, so they can be referenced and driven without `omni.anim.people`.
+Not yet done on this project: binding the walk cycle and moving characters along the
+baked egress tracks.
 
 ## 10. AWS specifics
 
