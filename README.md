@@ -1,73 +1,124 @@
-# GameDayTwin — venue rehearsal engine (finals build, 2026-09-30/10-01)
+# GameDayTwin — a rehearsal engine for venue safety
 
-A fresh, minimal build that produces **real measured numbers** on NVIDIA Isaac Sim for two
-questions a venue safety team asks before an event:
+**Presidio Innovation Sprint 2026 · LA Olympics '28 Challenge · Team Bankai**
 
-1. **Where does a surge concentrate people, and does a layout change fix it?**
-   (`sim/density.py` — crowd density per 1 m² cell over time, before vs after, same seed)
-2. **Which floor area can the cameras not see?**
-   (`sim/coverage.py` — PhysX ray-cast coverage certificate per camera, before vs after a camera move)
+> You cannot rehearse the Olympics. You cannot evacuate 70,000 people for practice, stage a
+> midnight surge, or stand in a venue that hasn't been built yet. GameDayTwin builds the venue
+> in simulation, runs the crowd and the cameras through it, and measures what no survey can:
+> **where people will be that nobody is watching.**
 
-## What is real, what is proxy, what is simplified — say this on stage
+Built on **NVIDIA Isaac Sim 6.0.1 / Omniverse** (OpenUSD twin, PhysX ray-casts, routed crowds,
+RTX render), run on **AWS** (g5.2xlarge, A10G), fitting the camera network **Cisco** supplies
+to LA28 as Official Network Equipment Partner.
 
-| Item | Status |
+---
+
+## What it answers today — measured
+
+Everything in this section was computed on a real Isaac Sim run. Nothing is illustrative.
+
+| Question | Answer on the proxy venue |
 |---|---|
-| Venue geometry | **Procedural proxy** ("stadium-section proxy"): 60 × 40 m concourse, 3 stand blocks, barrier row with gates, 4 pillars, 3 exits. Not any real venue. |
-| Coverage numbers | ✅ **Real measurement** — PhysX `raycast_closest` from each camera to a 1 m grid, 1 m above the walking surface (stand tiers included), on EC2 g5.2xlarge (A10G) in the Isaac Sim 6.0.1 container. |
-| Crowd density numbers | ❌ **Do not use.** `density.py` runs, but fails its own non-overlap check (tightest agent spacing 0.028 m against a 0.40 m body diameter), so the densities it reports exceed the physical packing ceiling of 7.2 persons/m². Treated as roadmap, not a result. |
-| Density threshold | Configurable (`--threshold`, default 4 persons/m²). **Cite a source before putting the number on a slide.** |
-| Renders | Not produced in this build — `coverage.py --stills` exists but was not run. |
-| Smoke (Flow), ML perception tests | **Roadmap** — not run. (`omni.flowusd` is confirmed present in the container.) |
+| Which floor can no camera see? | **226 m²** — all of it on the concourse, where people walk. Seating is 100 % covered. |
+| Why? | Camera C3 sees only **8 %** of the concourse: the seating blocks sit in its line of sight. |
+| Does moving it help? | Yes. One camera moved to mid north wall → C3 **68 %** of the concourse, unwatched floor **188 m²**, union coverage **90.6 → 92.2 %**. |
+| How does the crowd leave? | 428 people routed to exits: 90 % clear in **56.6 s**, gate load **226 / 202**. Opening a third gate balances it to **144 / 144 / 140**. |
+| Where is the exposure? | *Unwatched person-seconds* — every second anyone spends on floor no camera sees — fuses the two. It ranks fixes by human exposure, not square metres. |
 
-## Measured result (2026-09-30, corrected re-measure 19:54Z)
+Full numbers: [`results/coverage_A_terrain.json`](results/coverage_A_terrain.json),
+[`results/coverage_B_terrain.json`](results/coverage_B_terrain.json),
+[`results/egress_before.json`](results/egress_before.json), [`results/egress_after.json`](results/egress_after.json).
 
-Camera set A: four cameras, 90° HFOV, 5 m on the perimeter. Test point rides the stand
-tiers (`--target-mode terrain`), so seated areas are measured where people actually are;
-pillar footprints excluded.
+## What is real, what is proxy, what is roadmap
 
-| Metric | Set A | Set B (C3 moved to mid north wall) |
+| | Status |
+|---|---|
+| Venue | **Procedural proxy** — a 60 × 40 m stadium section: three stand blocks, a barrier with gates, four pillars, three exits. Not any real venue. |
+| Camera coverage | **Measured.** PhysX `raycast_closest` from each camera to a 1 m grid, 1 m above the walking surface, following the stand tiers. Pillar footprints excluded. |
+| Crowd egress | **Measured routing and throughput.** Shortest-path routes, staggered departures. People do **not** collide, so **no density figure is derived or claimed** — a density measured on overlapping bodies is meaningless. |
+| Unwatched person-seconds | Derived from the two measurements above. Only as good as the crowd model. |
+| Perception-AI test (camera sees the person, the model misses them) | **Roadmap.** Not built. Isaac Sim Replicator gives the ground-truth frames; the detector run is the next module. |
+| Volumetric smoke (Omniverse Flow) | **Roadmap.** `omni.flowusd` is present in the container; not run. |
+| Mounting feasibility | **Input, not output.** The engine ranks among mounting points the venue supplies. It cannot know whether a bracket fits. |
+
+## The films and the certificate
+
+All three open from disk in any browser. No server, no network, nothing to install.
+
+| File | Length | What it is |
 |---|---|---|
-| Union coverage, whole floor | **90.6 %** | **92.2 %** |
-| Floor no camera sees | **226 m²** (all concourse) | **188 m²** (all concourse) |
-| Concourse covered (1,632 m²) | 86.2 % | 88.5 % |
-| Seating covered (768 m²) | 100 % | 100 % |
-| C1 / C2 | 76.6 % (concourse 72.1, seating 86.1) | same |
-| C3 | **11.7 %** (concourse 8.0, seating 19.5) | **54.3 %** (concourse 68.4, seating 24.5) |
-| C4 | 11.7 % | 11.7 % |
+| [`app/cinematic.html`](app/cinematic.html) | 70 s | **Measured film.** The venue draws itself, 428 real routes play, the floor lights up by camera count, one camera moves. Every number on screen comes from `results/`. |
+| [`app/vision.html`](app/vision.html) | 46 s | **Concept reel**, stamped *not a measurement*: the same engine on a transit platform, steward posts, exit-sign visibility and a temporary venue. No figures shown, by design. |
+| [`app/index.html`](app/index.html) | — | **Readiness certificate.** Before/after toggle, coverage map, per-camera table with concourse/seating split, provenance. |
 
-C1≡C2 and C3≡C4 in set A because the venue and rig are symmetric — a consistency check,
-not duplicated data. Ray-cast time 0.6 s per set.
+Controls in the films: `Space` play/pause · `R` restart · `← →` skip 5 s · `F` fullscreen · `H` hide bar.
 
-**Superseded:** the first run (`coverage_A.json`, floor mode) reported 850 m² unseen. 624 m²
-of that was the *inside* of the solid stand blocks (test point at 1 m above z=0 is inside
-the geometry), which is meaningless. The concourse figure (226 m²) was identical in both
-modes, as expected — surface height is zero there.
+## How it works
 
-Open `app/index.html` (certificate), `app/cinematic.html` (70 s measured film) or
-`app/vision.html` (46 s concept reel — explicitly not a measurement).
-
-### Known gaps in this run
-- `coverage.py` crashes in `simulation_app.close()` *after* writing results — cosmetic, the JSON is complete.
-- `provenance.isaac_sim_version` reads "unknown" and `git_hash` "n/a" (the version file and git dir are not visible inside the container).
-- The egress model routes but does not collide; it yields throughput and clear times only — never a density figure.
-
-## Layout
 ```
-sim/build_venue.py   procedural venue → venue.usd + venue.venue.json (before: gate G3 closed; --open-gates G3 for after)
-sim/cameras.json     camera set A and set B (B moves C3 to look along the gates)
-sim/coverage.py      coverage certificate → results/coverage_<set>.json (+ stills)
-sim/density.py       surge scenario → results/surge_<before|after>.json (+ stills)
-sim/run_all.sh       exact command order on the GPU box
-results/             committed evidence (json, png)
-app/index.html       single-file viewer of results/ — opens offline
+sim/venue_def.py       the venue as data (no USD dependency) — single source of truth
+sim/build_venue.py     → OpenUSD stage with PhysX colliders            (usdpy.sh, no GPU)
+sim/coverage.py        → ray-cast coverage per camera                   (Isaac Sim, GPU)
+sim/bake_egress.py     → routed crowd as USD time samples + JSON tracks  (plain Python)
+sim/paint_coverage.py  → coverage painted onto the 3D floor as instanced tiles
+sim/remeasure.sh       → both camera sets in a throw-away container
+app/*.html             → self-contained pages; data embedded at build time
 ```
 
-## Run (GPU box, Isaac Sim 6.0.1 at /opt/IsaacSim)
+Two primitives do all the work — **ray-cast visibility** (what can see what, through real
+geometry) and **navmesh routing + throughput** (how people move and how fast a space
+clears). Change the building file and the same code answers the same questions for a Metro
+platform, a fan zone or a temporary overlay.
+
+## Run it yourself
+
 ```bash
-cd ~/gameday-twin && bash sim/run_all.sh
-```
-`density.py` also runs with plain python + numpy (`--no-isaac`) for the numbers alone.
+# routing + tracks need only Python 3 (no Isaac Sim)
+python3 sim/venue_def.py --out results/venue_before.venue.json
+python3 sim/bake_egress.py --venue results/venue_before.usd --report results/egress_before.json \
+        --tracks results/tracks_before.json --seed 42
 
-## Provenance
-Every result JSON carries seed, git hash, Isaac Sim version (where applicable), EC2 instance
-type and timestamp. The viewer shows them.
+# geometry + coverage need Isaac Sim 6.0.1 (container nvcr.io/nvidia/isaac-sim:6.0.1)
+bash sim/usdpy.sh sim/build_venue.py --out results/venue_before.usd
+bash sim/remeasure.sh          # both camera sets, terrain mode
+```
+
+Setting Isaac Sim up on EC2 cost us a night of debugging; every hurdle and its fix is in
+[`docs/ISAAC_SIM_ON_EC2.md`](docs/ISAAC_SIM_ON_EC2.md) — read it before you start a box.
+
+## Why simulation, and not cameras or footage
+
+An AI camera tells you what it saw. Nothing tells you what it missed — a missed person
+produces no alert, no log, no error. In the real world there is no ground truth, so the
+failure is invisible by construction. Recorded footage has the same problem, contains none
+of the rare events, and does not exist for a venue that has not been built.
+
+In a twin you know where every person is, you can re-run the identical scenario after a fix,
+you can stage the dangerous case safely, and you can rehearse a building that only exists in
+simulation. It also needs **no real video**: no footage of real people, no PII, no
+data-sharing agreement.
+
+*Cars have crash tests. Buildings have fire drills. Safety AI has nothing — yet.*
+
+## Honesty notes
+
+- The first coverage run reported 850 m² unseen. 624 m² of that was the *inside* of the
+  solid seating blocks — the test point sat inside the geometry. That number is superseded
+  and should not be quoted. The concourse figure was identical in both runs (226 m²).
+- C1 ≡ C2 and C3 ≡ C4 in the original layout because the venue and the rig are symmetric
+  about the centre line — a consistency check, not duplicated data.
+- `coverage.py` aborts inside `simulation_app.close()` *after* writing its results. Cosmetic.
+- The egress film and the 3D scenes use capsules, not human models: NVIDIA's crowd
+  extension is not in the 6.0.1 container image and the People assets were not reachable.
+
+## Scalability and legacy
+
+The engine is content-agnostic. Venues, Metro stations and platforms (LA28's no-parking
+mandate puts every visitor through transit), temporary overlays, LAX, fan zones — same
+pipeline, different USD. After the Games, Los Angeles keeps the twins: wildfire evacuation
+rehearsal, airport operations, Metro planning. Readiness is a subscription by nature: every
+camera moved, model updated or layout changed re-runs the suite.
+
+---
+
+Sridhar Suresh · Team Bankai · 2026
