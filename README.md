@@ -13,7 +13,7 @@ questions a venue safety team asks before an event:
 | Item | Status |
 |---|---|
 | Venue geometry | **Procedural proxy** ("stadium-section proxy"): 60 × 40 m concourse, 3 stand blocks, barrier row with gates, 4 pillars, 3 exits. Not any real venue. |
-| Coverage numbers | ✅ **Real measurement** — PhysX `raycast_closest` from each camera to a 1 m grid at 1 m height, on EC2 g5.2xlarge (A10G) in the Isaac Sim 6.0.1 container. |
+| Coverage numbers | ✅ **Real measurement** — PhysX `raycast_closest` from each camera to a 1 m grid, 1 m above the walking surface (stand tiers included), on EC2 g5.2xlarge (A10G) in the Isaac Sim 6.0.1 container. |
 | Crowd density numbers | ❌ **Do not use.** `density.py` runs, but fails its own non-overlap check (tightest agent spacing 0.028 m against a 0.40 m body diameter), so the densities it reports exceed the physical packing ceiling of 7.2 persons/m². Treated as roadmap, not a result. |
 | Density threshold | Configurable (`--threshold`, default 4 persons/m²). **Cite a source before putting the number on a slide.** |
 | Renders | Not produced in this build — `coverage.py --stills` exists but was not run. |
@@ -49,7 +49,7 @@ Open `app/index.html` (certificate), `app/cinematic.html` (70 s measured film) o
 ### Known gaps in this run
 - `coverage.py` crashes in `simulation_app.close()` *after* writing results — cosmetic, the JSON is complete.
 - `provenance.isaac_sim_version` reads "unknown" and `git_hash` "n/a" (the version file and git dir are not visible inside the container).
-- Camera set B was not run, so there is no before/after camera-move comparison yet.
+- The egress model routes but does not collide; it yields throughput and clear times only — never a density figure.
 
 ## Layout
 ```
